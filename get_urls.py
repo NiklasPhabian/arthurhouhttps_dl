@@ -56,7 +56,7 @@ class ArthurhouFolder:
         return links
     
 
-def get_urls(products, start, stop, user, level):
+def get_urls(products, start, stop, user, pwd, level):
     urls = []
     start = datetime.datetime.strptime(start, '%Y-%m-%d').date()
     stop = datetime.datetime.strptime(stop, '%Y-%m-%d').date()
@@ -64,7 +64,7 @@ def get_urls(products, start, stop, user, level):
     iterator = start  
     while iterator + step <= stop:
         folder = ArthurhouFolder(iterator.year, iterator.month, iterator.day, level)
-        folder.download(user=user, pwd=user)
+        folder.download(user=user, pwd=pwd)
         for product in products:
             urls += folder.extract_granule_links(product)
         iterator += step
@@ -78,18 +78,21 @@ if __name__ == '__main__':
                         help='xcal product (1C.GCOMW1.AMSR2, 1C.NPP.ATMS, 1C.NOAA20.ATMS, 1C.GPM.GMI, 1C.NOAA19.MHS, 1C.METOPB.MHS, 1C.MT1.SAPHIR, 1C.F16.SSMIS, 1C.F17.SSMIS, 1C.F18.SSMIS)')    
     parser.add_argument('--level', metavar='level', required=True, type=str, 
                         help='processing level (e.g. 1A, 1B, 1C)')
-    parser.add_argument('--user', metavar='user', required=True, type=str, 
-                        help='email address to be used as login and password', )    
+    parser.add_argument('--email', metavar='email', required=True, type=str, 
+                        help='Email to be used as username and password on arthurhouhttps')    
     parser.add_argument('--start', metavar='start', required=True, type=str, 
                         help='start date (yyyy-mm-dd)')
     parser.add_argument('--stop', metavar='stop', required=True, type=str, 
                         help='stop date (yyyy-mm-dd)')
     parser.add_argument('--out', metavar='out', required=False, type=str, 
                         help='the csv filename to store the links in')
-    parser.set_defaults(out='out.csv')    
+    parser.set_defaults(out='urls.csv')    
     args = parser.parse_args()   
     
-    urls = get_urls(args.products, args.start, args.stop, args.user, args.level)
+    user= args.email
+    pwd = args.email
+    
+    urls = get_urls(args.products, args.start, args.stop, user, pwd, args.level)
     with open(args.out, 'a') as files_log:        
-        files_log.writelines("\n,".join(urls))
+        files_log.writelines("\n".join(urls))
         files_log.write('\n')
