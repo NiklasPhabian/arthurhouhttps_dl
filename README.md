@@ -7,6 +7,9 @@ We split the download into two steps:
 - Retrieve URLs
 - Retrieving granules
 
+## Install / requirements
+- `pip install bs4 requests lxml`
+
 
 ## Retrieving URLs
 
