@@ -1,10 +1,38 @@
 #!/usr/bin/python3
 
 import argparse
+import configparser
 import os
 import requests
 import time
 from eta import ETA
+
+
+class SessionEarthData(requests.Session):
+    AUTH_HOST = 'urs.earthdata.nasa.gov'
+
+    def __init__(self, username, password):
+        super().__init__()
+        self.auth = (username, password)
+
+    def rebuild_auth(self, prepared_request, response):
+        headers = prepared_request.headers
+        url = prepared_request.url
+        if 'Authorization' in headers:
+            original_parsed = requests.utils.urlparse(response.request.url)
+            redirect_parsed = requests.utils.urlparse(url)
+            if (original_parsed.hostname != redirect_parsed.hostname) and \
+                    redirect_parsed.hostname != self.AUTH_HOST and \
+                    original_parsed.hostname != self.AUTH_HOST:
+                del headers['Authorization']
+        return
+
+
+config = configparser.ConfigParser()
+config.read('user.config')
+username= config['user']['user']
+password = config['user']['pwd']
+session = SessionEarthData(username=username, password=password)
 
 
 class Granule:
@@ -26,14 +54,11 @@ class Granule:
         else:
             return False
     
-    def download(self, user, pwd):
-        downloaded = self.already_downloaded()        
-        auth = requests.auth.HTTPBasicAuth(user, pwd)
+    def download(self):
+        downloaded = self.already_downloaded()                
         while not downloaded:                
             try:
-                print(self.url)
-                ret = self.session.get(self.url, auth=auth)                   
-                print(ret)
+                ret = session.get(self.url)                   
             except Exception as e:
                 print(e)
                 print('download failed, trying again')
@@ -51,14 +76,14 @@ class Granule:
                 print(ret.status_code)
                 
 
-def download(folder, file_name, user, pwd):
+def download(folder, file_name):
     urls = open(file_name).readlines()
     eta = ETA(n_tot=len(urls))
     for url in urls[::-1]:
         url = url.strip()
         granule = Granule(url=url, folder=folder)
         eta.display(step='Downloading {name}'.format(name=granule.file_name))
-        granule.download(user, pwd)
+        granule.download()
         del urls[-1]
         open(file_name, 'w').writelines(urls)
 
@@ -69,12 +94,8 @@ if __name__ == '__main__':
                         help='CSV to read urls from')
     parser.add_argument('--folder', metavar='folder', type=str, required=False,
                         help='Destination folder', default='.')
-    parser.add_argument('--email', metavar='email', type=str, required=True,
-                        help='Email to be used as username and password on arthurhouhttps')
     args = parser.parse_args()
     
-    user= args.email
-    pwd = args.email
 
     if args.file_list is None or args.folder is None:
         print('Wrong usage')
@@ -83,4 +104,5 @@ if __name__ == '__main__':
     
 
     folder = os.path.expanduser(args.folder + '/')
-    download(folder, args.file_list, user, pwd)
+    download(folder, args.file_list)
+ 
